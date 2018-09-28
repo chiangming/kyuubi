@@ -64,6 +64,7 @@
         <hive.deps.scope>provided</hive.deps.scope>
         <jpam.version>1.1</jpam.version>
         <apacheds.version>2.0.0-M15</apacheds.version>
+
     </properties>
 
     <repositories>
