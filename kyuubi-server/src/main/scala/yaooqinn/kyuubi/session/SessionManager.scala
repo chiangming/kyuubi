@@ -22,6 +22,7 @@ import java.util.Date
 import java.util.concurrent._
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 import org.apache.commons.io.FileUtils
 import org.apache.hive.service.cli.thrift.TProtocolVersion
@@ -51,6 +52,7 @@ private[kyuubi] class SessionManager private(
   private[this] var sessionTimeout: Long = _
   private[this] var checkOperation: Boolean = false
   private[this] var shutdown: Boolean = false
+  private[this] final val sessionHandles = mutable.LinkedHashMap[String, SessionHandle]()
 
   def this() = this(classOf[SessionManager].getSimpleName)
 
@@ -201,6 +203,21 @@ private[kyuubi] class SessionManager private(
     cleanupLoggingRootDir()
   }
 
+  def register(sessionHandle: SessionHandle): SessionHandle = {
+    info(s"Registering new sessionHandle ${sessionHandle.getSessionId}")
+    synchronized {
+      sessionHandles.put(sessionHandle.getSessionId.toString, sessionHandle)
+    }
+    sessionHandle
+  }
+
+  def unRegister(sessionHandle: SessionHandle): Unit = {
+    info(s"Unregistering the sessionHandle ${sessionHandle.getSessionId}")
+    synchronized {
+      sessionHandles.remove(sessionHandle.getSessionId.toString)
+    }
+  }
+
   /**
    * Opens a new session and creates a session handle.
    * The username passed to this method is the effective username.
@@ -239,12 +256,22 @@ private[kyuubi] class SessionManager private(
         sessionHandle.getSessionId.toString,
         kyuubiSession.getUserName)
     }
-
+    register(sessionHandle)
     sessionHandle
   }
 
   @throws[KyuubiSQLException]
   def getSession(sessionHandle: SessionHandle): KyuubiSession = {
+    val session = handleToSession.get(sessionHandle)
+    if (session == null) {
+      throw new KyuubiSQLException("Invalid SessionHandle: " + sessionHandle)
+    }
+    session
+  }
+
+  @throws[KyuubiSQLException]
+  def getSession(sessionHandleID: String): KyuubiSession = {
+    val sessionHandle = sessionHandles.get(sessionHandleID).get
     val session = handleToSession.get(sessionHandle)
     if (session == null) {
       throw new KyuubiSQLException("Invalid SessionHandle: " + sessionHandle)
@@ -263,6 +290,7 @@ private[kyuubi] class SessionManager private(
       _.onSessionClosed(sessionHandle.getSessionId.toString)
     }
     cacheManager.decrease(sessionUser)
+    unRegister(sessionHandle)
     session.close()
   }
 

@@ -22,9 +22,8 @@ import javax.servlet.http.HttpServletRequest
 import org.scalatra._
 import scala.concurrent._
 import scala.concurrent.duration._
-
 import yaooqinn.kyuubi.Logging
-import yaooqinn.kyuubi.session.{KyuubiSession, SessionManager}
+import yaooqinn.kyuubi.session.{KyuubiSession, SessionHandle, SessionManager}
 
 object SessionServlet extends Logging
 
@@ -39,7 +38,7 @@ abstract class SessionServlet[S<: KyuubiSession](private[kyuubi] val sessionMana
     * Creates a new session based on the current request. The implementation is responsible for
     * parsing the body of the request.
     */
-  // protected def createSession(req: HttpServletRequest): S
+   protected def createSession(req: HttpServletRequest): SessionHandle
 
   /**
     * Returns a object representing the session data to be sent back to the client.
@@ -58,7 +57,7 @@ abstract class SessionServlet[S<: KyuubiSession](private[kyuubi] val sessionMana
     "post function start..."
   }
 
-  private def getRequestPathInfo(request: HttpServletRequest): String = {
+  protected def getRequestPathInfo(request: HttpServletRequest): String = {
     if (request.getPathInfo != null && request.getPathInfo != "/") {
       request.getPathInfo
     } else {

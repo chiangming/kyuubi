@@ -17,12 +17,71 @@
 
 package yaooqinn.kyuubi.servlet
 
+import javax.servlet.http.HttpServletRequest
+
+import org.apache.hive.service.cli.thrift.TProtocolVersion
+import org.scalatra._
+
 import yaooqinn.kyuubi.Logging
-import yaooqinn.kyuubi.session.SessionManager
+import yaooqinn.kyuubi.session.{KyuubiSession, SessionHandle, SessionManager}
+
+
 
 object KyuubiServlet extends Logging
 
 class KyuubiServlet(sessionManager: SessionManager)
   extends SessionServlet(sessionManager) {
+
+  override protected def createSession(req: HttpServletRequest): SessionHandle = {
+    val createRequest = bodyAs[CreateRequest](req)
+
+    // scalastyle:off println
+    println("create Session :" + createRequest)
+    // scalastyle:on println
+
+    val sessionHandle = sessionManager.openSession(
+      TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V8
+      ,createRequest.username.getOrElse("default")
+      ,createRequest.password.getOrElse("") ,
+      createRequest.ipAddress.getOrElse("0.0.0.0"),
+      createRequest.sessionConf,
+      withImpersonation = true)
+
+    sessionHandle
+  }
+
+  post("/") {
+      val sessionhandler = sessionManager.register(createSession(request))
+      val session = sessionManager.getSession(sessionhandler)
+      val sessionID = sessionhandler.getSessionId.toString
+
+    Map("sessionID" -> sessionID)
+  }
+
+  post("/:sessionID/statement") {
+    val statement = bodyAs[ExecuteRequest](request).code
+    val sessionID = params("sessionID").toString
+    val session = sessionManager.getSession(sessionID)
+    val opHandle = session.executeStatement(statement)
+    var option = sessionManager.getOperationMgr.getOperation(opHandle)
+
+    while (!option.isFinished) {
+      option = sessionManager.getOperationMgr.getOperation(opHandle)
+    }
+
+    var result = option.getResult()
+    var iter = option.getIter()
+    var statementId = option.getStatementId()
+
+    var resultString = ""
+    while(iter.hasNext) {
+      var row = iter.next()
+      for(i <- 0 to row.length-1) {resultString += " | " + row.get(i).toString}
+      resultString  += " |  \n"
+    }
+
+     Map("statementId" -> statementId, "result" -> resultString)
+
+  }
 
 }

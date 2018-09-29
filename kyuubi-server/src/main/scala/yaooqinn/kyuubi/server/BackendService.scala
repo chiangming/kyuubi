@@ -77,6 +77,18 @@ private[server] class BackendService private(name: String)
     sessionHandle
   }
 
+  def openRESTSession(
+      username: String,
+      password: String,
+      ipAddress: String,
+      configuration: Map[String, String],
+      delegationToken: String): SessionHandle = {
+    val sessionHandle = sessionManager.openSession(
+      TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V8
+      , username, password, ipAddress, configuration, withImpersonation = true)
+    sessionHandle
+  }
+
   def closeSession(sessionHandle: SessionHandle): Unit = {
     sessionManager.closeSession(sessionHandle)
   }

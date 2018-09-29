@@ -72,7 +72,7 @@ private[kyuubi] class KyuubiServer private(name: String)
       maxFileSize = Some(kyuubiServletConf.getLong(KyuubiServletConf.FILE_UPLOAD_MAX_SIZE))
     ).toMultipartConfigElement
 
-    var sessionManager = new SessionManager()
+    var sessionManager = _beService.getSessionManager
 
     server = new WebServer(kyuubiServletConf, host, port)
     server.context.setResourceBase("src/main/yaooqinn/kyuubi/server")

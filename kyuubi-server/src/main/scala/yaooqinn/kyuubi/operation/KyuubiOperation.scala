@@ -300,6 +300,22 @@ class KyuubiOperation(session: KyuubiSession, statement: String) extends Logging
     }
   }
 
+  def getStatementId(): String = {
+    this.statementId
+  }
+
+  def getResult(): DataFrame = {
+    this.result
+  }
+
+  def getIter(): Iterator[Row] = {
+    this.iter
+  }
+
+  def isFinished: Boolean = {
+    checkState(FINISHED)
+  }
+
   private[this] def execute(): Unit = {
     try {
       statementId = UUID.randomUUID().toString
@@ -318,7 +334,7 @@ class KyuubiOperation(session: KyuubiSession, statement: String) extends Logging
       KyuubiServerMonitor.getListener(session.getUserName).foreach {
         _.onStatementParsed(statementId, result.queryExecution.toString())
       }
-      debug(result.queryExecution.toString())
+      info(":::::::::::::::::::::::::::::::::" + result.queryExecution.toString())
       iter = if (incrementalCollect) {
         info("Executing query in incremental collection mode")
         result.toLocalIterator().asScala
