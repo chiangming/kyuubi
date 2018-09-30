@@ -69,11 +69,22 @@ class KyuubiServlet(sessionManager: SessionManager)
       option = sessionManager.getOperationMgr.getOperation(opHandle)
     }
 
+    var metadata = session.getResultSetMetadata(opHandle)
+    var metadataString = ""
+    var metadataArray = metadata.fieldNames
+    for (name <- metadataArray) {
+      metadataString += " | " + name
+    }
+    metadataString += " |  \n"
+
+
+
     var result = option.getResult()
     var iter = option.getIter()
     var statementId = option.getStatementId()
 
     var resultString = ""
+    resultString += metadataString
     while(iter.hasNext) {
       var row = iter.next()
       for(i <- 0 to row.length-1) {resultString += " | " + row.get(i).toString}
