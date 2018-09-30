@@ -71,10 +71,14 @@ class KyuubiServlet(sessionManager: SessionManager)
 
     var metadata = session.getResultSetMetadata(opHandle)
     var metadataString = ""
+    var resultMap: Map[String, Map[Int, String]] = Map()
+    var line0: Map[Int, String] = Map()
     var metadataArray = metadata.fieldNames
-    for (name <- metadataArray) {
-      metadataString += " | " + name
+    for (i <- 0 to metadataArray.length - 1) {
+      metadataString += " | " + metadataArray(i)
+      line0 += (i -> metadataArray(i))
     }
+    resultMap += ("line0" -> line0)
     metadataString += " |  \n"
 
 
@@ -85,14 +89,21 @@ class KyuubiServlet(sessionManager: SessionManager)
 
     var resultString = ""
     resultString += metadataString
+    var line = 0
     while(iter.hasNext) {
+      line += 1
       var row = iter.next()
-      for(i <- 0 to row.length-1) {resultString += " | " + row.get(i).toString}
+      var lines: Map[Int, String] = Map()
+      for(i <- 0 to row.length-1) {
+        resultString += " | " + row.get(i).toString
+        lines += (i -> row.get(i).toString)
+      }
+      resultMap += (("line" + line) -> lines)
       resultString  += " |  \n"
     }
 
-     Map("statementId" -> statementId, "result" -> resultString)
-
+     // Map("statementId" -> statementId, "resultToString" -> resultString, "result" -> resultMap)
+    Map("statementId" -> statementId, "result" -> resultMap)
   }
 
 }
