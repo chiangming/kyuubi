@@ -271,7 +271,11 @@ private[kyuubi] class SessionManager private(
 
   @throws[KyuubiSQLException]
   def getSession(sessionHandleID: String): KyuubiSession = {
-    val sessionHandle = sessionHandles.get(sessionHandleID).get
+    val idToSession = sessionHandles.get(sessionHandleID)
+    if (idToSession == None) {
+      throw new KyuubiSQLException("Invalid SessionHandleID: " + sessionHandleID)
+    }
+    val sessionHandle = idToSession.get
     val session = handleToSession.get(sessionHandle)
     if (session == null) {
       throw new KyuubiSQLException("Invalid SessionHandle: " + sessionHandle)

@@ -22,7 +22,7 @@ import javax.servlet.http.HttpServletRequest
 import org.apache.hive.service.cli.thrift.TProtocolVersion
 import org.scalatra._
 
-import yaooqinn.kyuubi.Logging
+import yaooqinn.kyuubi.{KyuubiSQLException, Logging}
 import yaooqinn.kyuubi.session.{KyuubiSession, SessionHandle, SessionManager}
 
 
@@ -41,8 +41,8 @@ class KyuubiServlet(sessionManager: SessionManager)
 
     val sessionHandle = sessionManager.openSession(
       TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V8
-      ,createRequest.username.getOrElse("default")
-      ,createRequest.password.getOrElse("") ,
+      , createRequest.username.getOrElse("default")
+      , createRequest.password.getOrElse(""),
       createRequest.ipAddress.getOrElse("0.0.0.0"),
       createRequest.sessionConf,
       withImpersonation = true)
@@ -51,9 +51,9 @@ class KyuubiServlet(sessionManager: SessionManager)
   }
 
   post("/") {
-      val sessionhandler = sessionManager.register(createSession(request))
-      val session = sessionManager.getSession(sessionhandler)
-      val sessionID = sessionhandler.getSessionId.toString
+    val sessionhandler = sessionManager.register(createSession(request))
+    val session = sessionManager.getSession(sessionhandler)
+    val sessionID = sessionhandler.getSessionId.toString
 
     Map("sessionID" -> sessionID)
   }
@@ -65,45 +65,47 @@ class KyuubiServlet(sessionManager: SessionManager)
     val opHandle = session.executeStatement(statement)
     var option = sessionManager.getOperationMgr.getOperation(opHandle)
 
-    while (!option.isFinished) {
+    while (!option.isTerminal) {
       option = sessionManager.getOperationMgr.getOperation(opHandle)
     }
-
-    var metadata = session.getResultSetMetadata(opHandle)
-    var metadataString = ""
-    var resultMap: Map[String, Map[Int, String]] = Map()
-    var line0: Map[Int, String] = Map()
-    var metadataArray = metadata.fieldNames
-    for (i <- 0 to metadataArray.length - 1) {
-      metadataString += " | " + metadataArray(i)
-      line0 += (i -> metadataArray(i))
-    }
-    resultMap += ("line0" -> line0)
-    metadataString += " |  \n"
-
-
-
-    var result = option.getResult()
-    var iter = option.getIter()
-    var statementId = option.getStatementId()
-
-    var resultString = ""
-    resultString += metadataString
-    var line = 0
-    while(iter.hasNext) {
-      line += 1
-      var row = iter.next()
-      var lines: Map[Int, String] = Map()
-      for(i <- 0 to row.length-1) {
-        resultString += " | " + row.get(i).toString
-        lines += (i -> row.get(i).toString)
+    try {
+      var metadata = session.getResultSetMetadata(opHandle)
+      var metadataString = ""
+      var resultMap: Map[String, Map[Int, String]] = Map()
+      var line0: Map[Int, String] = Map()
+      var metadataArray = metadata.fieldNames
+      for (i <- 0 to metadataArray.length - 1) {
+        metadataString += " | " + metadataArray(i)
+        line0 += (i -> metadataArray(i))
       }
-      resultMap += (("line" + line) -> lines)
-      resultString  += " |  \n"
+      resultMap += ("line0" -> line0)
+      metadataString += " |  \n"
+
+
+      var result = option.getResult()
+      var iter = option.getIter()
+      var statementId = option.getStatementId()
+
+      var resultString = ""
+      resultString += metadataString
+      var line = 0
+      while (iter.hasNext) {
+        line += 1
+        var row = iter.next()
+        var lines: Map[Int, String] = Map()
+        for (i <- 0 to row.length - 1) {
+          resultString += " | " + row.get(i).toString
+          lines += (i -> row.get(i).toString)
+        }
+        resultMap += (("line" + line) -> lines)
+        resultString += " |  \n"
+      }
+
+      // Map("statementId" -> statementId, "resultToString" -> resultString, "result" -> resultMap)
+      Map("statementId" -> statementId, "result" -> resultMap)
+    } catch {
+      case e => throw new KyuubiSQLException("Something wrong in this SQL statement," +
+        " please check it. ")
     }
-
-     // Map("statementId" -> statementId, "resultToString" -> resultString, "result" -> resultMap)
-    Map("statementId" -> statementId, "result" -> resultMap)
   }
-
 }

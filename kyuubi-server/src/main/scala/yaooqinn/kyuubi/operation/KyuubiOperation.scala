@@ -104,6 +104,12 @@ class KyuubiOperation(session: KyuubiSession, statement: String) extends Logging
     checkState(CLOSED) || checkState(CANCELED)
   }
 
+  def isTerminal: Boolean = {
+    this.state.isTerminal()
+  }
+
+
+
   @throws[KyuubiSQLException]
   private[this] def assertState(state: OperationState): Unit = {
     if (this.state ne state) {
@@ -314,6 +320,10 @@ class KyuubiOperation(session: KyuubiSession, statement: String) extends Logging
 
   def isFinished: Boolean = {
     checkState(FINISHED)
+  }
+
+  def isError: Boolean = {
+    checkState(ERROR)
   }
 
   private[this] def execute(): Unit = {
