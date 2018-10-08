@@ -68,19 +68,20 @@ class KyuubiServlet(sessionManager: SessionManager)
     while (!option.isTerminal) {
       option = sessionManager.getOperationMgr.getOperation(opHandle)
     }
+
     try {
       var metadata = session.getResultSetMetadata(opHandle)
       var metadataString = ""
       var resultMap: Map[String, Map[Int, String]] = Map()
       var line0: Map[Int, String] = Map()
       var metadataArray = metadata.fieldNames
+
       for (i <- 0 to metadataArray.length - 1) {
         metadataString += " | " + metadataArray(i)
         line0 += (i -> metadataArray(i))
       }
       resultMap += ("line0" -> line0)
       metadataString += " |  \n"
-
 
       var result = option.getResult()
       var iter = option.getIter()
