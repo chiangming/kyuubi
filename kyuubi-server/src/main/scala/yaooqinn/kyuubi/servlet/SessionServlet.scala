@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletRequest
 import org.scalatra._
 import scala.concurrent._
 import scala.concurrent.duration._
+
 import yaooqinn.kyuubi.Logging
 import yaooqinn.kyuubi.session.{KyuubiSession, SessionHandle, SessionManager}
 
@@ -29,7 +30,7 @@ object SessionServlet extends Logging
 
 abstract class SessionServlet[S<: KyuubiSession](private[kyuubi] val sessionManager: SessionManager)
   extends JsonServlet
-    with ApiVersioningSupport
+//    with ApiVersioningSupport
     with MethodOverride
     with UrlGeneratorSupport
     with GZipSupport

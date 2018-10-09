@@ -22,7 +22,7 @@ import org.scalatra.{NotAcceptable, ScalatraBase}
 
 trait ApiVersioningSupport extends AbstractApiVersioningSupport {
   this: ScalatraBase =>
-  // Link the abstract trait to Livy's version enum.
+  // Link the abstract trait to WebServer's version enum.
   override val apiVersions = ApiVersions
   override type ApiVersionType = ApiVersions.Value
 }

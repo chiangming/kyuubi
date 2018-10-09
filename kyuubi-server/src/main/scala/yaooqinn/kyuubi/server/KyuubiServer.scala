@@ -26,6 +26,7 @@ import org.scalatra.metrics.MetricsBootstrap
 import org.scalatra.servlet.{MultipartConfig, ServletApiImplicits}
 import yaooqinn.kyuubi._
 import yaooqinn.kyuubi.ha.HighAvailabilityUtils
+import yaooqinn.kyuubi.server.KyuubiServer.info
 import yaooqinn.kyuubi.service.{CompositeService, ServiceException}
 import yaooqinn.kyuubi.servlet._
 import yaooqinn.kyuubi.session.SessionManager
@@ -39,7 +40,7 @@ private[kyuubi] class KyuubiServer private(name: String)
   import KyuubiServletConf._
 
   // make kyuubi accessible for servlet
-  private var server: WebServer = _
+  private var webServer: WebServer = _
   private var _serverUrl: Option[String] = None
   private[kyuubi] var kyuubiServletConf: KyuubiServletConf = _
 
@@ -64,6 +65,7 @@ private[kyuubi] class KyuubiServer private(name: String)
   override def start(): Unit = {
     super.start()
     started.set(true)
+
     kyuubiServletConf = new KyuubiServletConf()
     // make kyuubi accessible for servlet
     val host = kyuubiServletConf.get(SERVER_HOST)
@@ -74,20 +76,22 @@ private[kyuubi] class KyuubiServer private(name: String)
 
     var sessionManager = _beService.getSessionManager
 
-    server = new WebServer(kyuubiServletConf, host, port)
-    server.context.setResourceBase("src/main/yaooqinn/kyuubi/server")
-    // todo this may result some problems
+    webServer = new WebServer(kyuubiServletConf, host, port)
+    // webServer.context.setResourceBase("src/main/yaooqinn/kyuubi/server")
+    // todo this resource base may cause some problems unknown
+
+    info("Service: [WebServer] is initialized.")
 
     val kyuubiVersionServlet = new JsonServlet {
       before() { contentType = "application/json" }
 
       get("/") {
         Map("version" -> "0.1",
-          "user" -> "john")
+          "name" -> "Kyuubi Servlet")
       }
     }
 
-    server.context.addEventListener(
+    webServer.context.addEventListener(
       new ServletContextListener() with MetricsBootstrap with ServletApiImplicits {
         private def mount(sc: ServletContext, servlet: Servlet, mappings: String*): Unit = {
           val registration = sc.addServlet(servlet.getClass().getName(), servlet)
@@ -116,23 +120,25 @@ private[kyuubi] class KyuubiServer private(name: String)
 
       })
 
-    server.start()
+    info("Service: [WebServer] is started.")
+    webServer.start()
 
-    Runtime.getRuntime().addShutdownHook(new Thread("Servlet Server Shutdown") {
+    Runtime.getRuntime().addShutdownHook(new Thread("WebServer Shutdown") {
       override def run(): Unit = {
-        info("Shutting down Livy server.")
-        server.stop()
+        info("Shutting down WebServer.")
+        webServer.stop()
       }
     })
 
-    _serverUrl = Some(s"${server.protocol}://${server.host}:${server.port}")
-    sys.props("livy.server.server-url") = _serverUrl.get
+    // _serverUrl = Some(s"${webServer.protocol}://${webServer.host}:${webServer.port}")
+    // sys.props("kyuubi.server.server-url") = _serverUrl.get
 
   }
 
   override def stop(): Unit = {
     if (started.getAndSet(false)) {
       super.stop()
+      webServer.stop()
     }
   }
 }
