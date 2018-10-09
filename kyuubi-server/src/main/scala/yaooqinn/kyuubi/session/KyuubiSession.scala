@@ -113,12 +113,9 @@ private[kyuubi] class KyuubiSession(
       opHandleSet.add(opHandle)
       opHandle
     } catch {
-      case e =>
+      case e: KyuubiSQLException =>
         operationManager.closeOperation(opHandle)
-        throw new KyuubiSQLException("Something wrong in this statement" + e)
-//      case _ =>
-//        operationManager.closeOperation(opHandle)
-//        throw new KyuubiSQLException("Something wrong in this statement")
+        throw e
     } finally {
       release(true)
     }
